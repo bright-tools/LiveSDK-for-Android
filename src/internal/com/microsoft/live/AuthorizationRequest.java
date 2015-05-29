@@ -98,22 +98,26 @@ class AuthorizationRequest implements ObservableOAuthRequest, OAuthRequestObserv
             @Override
             public void onPageFinished(WebView view, String url) {
                 Uri uri = Uri.parse(url);
+                String uriHost = uri.getHost();
 
-                // only clear cookies that are on the logout domain.
-                if (uri.getHost().equals(Config.INSTANCE.getOAuthLogoutUri().getHost())) {
-                    this.saveCookiesInMemory(this.cookieManager.getCookie(url));
+                // Ensure that the URI references a host
+                if( uriHost != null ) {
+                    // only clear cookies that are on the logout domain.
+                    if (uriHost.equals(Config.INSTANCE.getOAuthLogoutUri().getHost())) {
+                        this.saveCookiesInMemory(this.cookieManager.getCookie(url));
+                    }
+
+                    Uri endUri = Config.INSTANCE.getOAuthDesktopUri();
+                    boolean isEndUri = UriComparator.INSTANCE.compare(uri, endUri) == 0;
+                    if (!isEndUri) {
+                        return;
+                    }
+
+                    this.saveCookiesToPreferences();
+
+                    AuthorizationRequest.this.onEndUri(uri);
+                    OAuthDialog.this.dismiss();
                 }
-
-                Uri endUri = Config.INSTANCE.getOAuthDesktopUri();
-                boolean isEndUri = UriComparator.INSTANCE.compare(uri, endUri) == 0;
-                if (!isEndUri) {
-                    return;
-                }
-
-                this.saveCookiesToPreferences();
-
-                AuthorizationRequest.this.onEndUri(uri);
-                OAuthDialog.this.dismiss();
             }
 
             /**

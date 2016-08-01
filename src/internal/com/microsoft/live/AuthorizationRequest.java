@@ -40,14 +40,12 @@ import android.content.DialogInterface.OnCancelListener;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.net.Uri;
-import android.net.http.SslError;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
 import android.webkit.CookieManager;
 import android.webkit.CookieSyncManager;
-import android.webkit.SslErrorHandler;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -98,26 +96,22 @@ class AuthorizationRequest implements ObservableOAuthRequest, OAuthRequestObserv
             @Override
             public void onPageFinished(WebView view, String url) {
                 Uri uri = Uri.parse(url);
-                String uriHost = uri.getHost();
 
-                // Ensure that the URI references a host
-                if( uriHost != null ) {
-                    // only clear cookies that are on the logout domain.
-                    if (uriHost.equals(Config.INSTANCE.getOAuthLogoutUri().getHost())) {
-                        this.saveCookiesInMemory(this.cookieManager.getCookie(url));
-                    }
-
-                    Uri endUri = Config.INSTANCE.getOAuthDesktopUri();
-                    boolean isEndUri = UriComparator.INSTANCE.compare(uri, endUri) == 0;
-                    if (!isEndUri) {
-                        return;
-                    }
-
-                    this.saveCookiesToPreferences();
-
-                    AuthorizationRequest.this.onEndUri(uri);
-                    OAuthDialog.this.dismiss();
+                // only clear cookies that are on the logout domain.
+                if (uri.getHost() != null && uri.getHost().equals(Config.INSTANCE.getOAuthLogoutUri().getHost())) {
+                    this.saveCookiesInMemory(this.cookieManager.getCookie(url));
                 }
+
+                Uri endUri = Config.INSTANCE.getOAuthDesktopUri();
+                boolean isEndUri = UriComparator.INSTANCE.compare(uri, endUri) == 0;
+                if (!isEndUri) {
+                    return;
+                }
+
+                this.saveCookiesToPreferences();
+
+                AuthorizationRequest.this.onEndUri(uri);
+                OAuthDialog.this.dismiss();
             }
 
             /**
@@ -137,13 +131,6 @@ class AuthorizationRequest implements ObservableOAuthRequest, OAuthRequestObserv
                                         String failingUrl) {
                 AuthorizationRequest.this.onError("", description, failingUrl);
                 OAuthDialog.this.dismiss();
-            }
-
-            @Override
-            public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
-                // TODO: Android does not like the SSL certificate we use, because it has '*' in
-                // it. Proceed with the errors.
-                handler.proceed();
             }
 
             private void saveCookiesInMemory(String cookie) {
